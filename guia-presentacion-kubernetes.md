@@ -111,89 +111,13 @@ Los namespaces de Linux son una característica del **kernel** que **aísla vist
 - **User Namespace:** Aislamiento de UIDs/GIDs
 - **IPC Namespace:** Aislamiento de comunicación entre procesos
 
-#### Funcionamiento a Bajo Nivel de Namespaces
-
-**¿Qué son realmente los Namespaces?**
-Los namespaces son **tablas de mapeo en el kernel** que proporcionan vistas aisladas de recursos globales del sistema. Cada proceso tiene una referencia a un conjunto de namespaces que determinan qué "vista" del sistema puede ver.
+#### Características Fundamentales:
+Los namespaces de Linux son **tablas de mapeo en el kernel** que proporcionan vistas aisladas de recursos globales del sistema.
 
 **Creación y Gestión:**
-```bash
-# System calls principales
-clone()    # Crear proceso con nuevos namespaces
-unshare()  # Desasociar proceso de namespaces compartidos
-setns()    # Unirse a namespace existente
-```
-
-**Funcionamiento por Tipo:**
-
-**PID Namespace:**
-```bash
-# Proceso padre ve PID real
-host$ ps aux | grep nginx
-root     1234  nginx
-
-# Dentro del namespace, ve PID virtualizado
-container$ ps aux | grep nginx
-root     1     nginx  # Mismo proceso, PID diferente
-```
-
-- El kernel mantiene un `pid_namespace` por contenedor
-- Cada namespace tiene su propia tabla de PIDs comenzando desde 1
-- Traducción automática entre PID real y PID virtualizado
-- Los procesos padre pueden ver PIDs de namespaces hijos, pero no al revés
-
-**Network Namespace:**
-```bash
-# Crear network namespace
-ip netns add test-ns
-
-# Cada namespace tiene su stack de red independiente
-ip netns exec test-ns ip link list
-# Solo ve loopback, no interfaces del host
-
-# Comunicación entre namespaces via veth pairs
-ip link add veth0 type veth peer name veth1
-ip link set veth1 netns test-ns
-```
-
-- Cada namespace tiene stack TCP/IP independiente
-- Tablas de routing, interfaces, sockets separados
-- El kernel enruta paquetes basado en el namespace origen
-- Comunicación mediante dispositivos virtuales (veth, bridge)
-
-**Mount Namespace:**
-```bash
-# Vista de puntos de montaje independiente
-unshare --mount /bin/bash
-mount -t tmpfs tmpfs /tmp  # Solo visible en este namespace
-ls /tmp                    # Diferente contenido que en host
-```
-
-- Cada proceso tiene un árbol de montajes independiente
-- El kernel resuelve paths relativos al namespace del proceso
-- Permite diferentes vistas de puntos de montaje
-- Propagación de montajes configurable (shared, private, slave)
-
-**User Namespace:**
-```bash
-# Mapeo de UIDs entre namespace y host
-echo '0 1000 1' > /proc/self/uid_map  # UID 0 interno = UID 1000 externo
-whoami    # Muestra 'root' dentro del namespace
-```
-
-- Mapeo de User IDs y Group IDs
-- Permite procesos "root" sin privilegios reales en el host
-- Fundamental para seguridad en contenedores
-
-**IPC Namespace:**
-```bash
-# Aislamiento de System V IPC
-ipcs -q    # Muestra colas de mensajes del namespace actual
-# Diferentes namespaces ven diferentes objetos IPC
-```
-
-- Aislamiento de message queues, semáforos, shared memory
-- Cada namespace tiene su propio conjunto de objetos IPC
+- **System calls:** `clone()`, `unshare()`, `setns()`
+- **Herramientas:** `ip netns`, `unshare`, etc.
+- **Integración:** Los contenedores utilizan estos namespaces automáticamente
 
 ### 3.4 Namespaces de Kubernetes (Logical-level)
 Los namespaces de Kubernetes son **espacios lógicos** que dividen recursos del cluster dentro de la plataforma de orquestación:
